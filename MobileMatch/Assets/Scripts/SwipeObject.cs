@@ -1,7 +1,4 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
-using UnityEngine.UI;
+﻿using UnityEngine;
 using Lean.Touch;
 
 public class SwipeObject : MonoBehaviour
@@ -16,6 +13,16 @@ public class SwipeObject : MonoBehaviour
     // Start is called before the first frame update
     private void Start()
     {
+        InitialiseScreen();
+    }
+
+    #region Internal Methods
+    /// <summary>
+    /// Initialises the display, de-activating all objects in the upper and lower arrays, reseting indexes, and activating the first object in
+    /// both arrays.
+    /// </summary>
+    private void InitialiseScreen()
+    {
         HideObjects(ref upperObjects);
         HideObjects(ref lowerObjects);
         _IndexLwrObjs = 0;
@@ -24,6 +31,9 @@ public class SwipeObject : MonoBehaviour
         lowerObjects[0].SetActive(true);
     }
 
+    /// <summary>
+    /// Changes object according to swipe direction and position on screen.
+    /// </summary>
     private void ChangeObject(SCREENPOSITION position, SWIPEDIRECTION direction)
     {
         switch (direction)
@@ -49,6 +59,9 @@ public class SwipeObject : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// De-activates all game objects in the reference array.
+    /// </summary>
     private void HideObjects(ref GameObject[] objects)
     {
         for (int i = 0; i < objects.Length; i++)
@@ -57,6 +70,9 @@ public class SwipeObject : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Increments the upper or lower index according to the position of the swipe (top / bottom) on screen.
+    /// </summary>
     private void IncrementCount(SCREENPOSITION position)
     {
         switch (position)
@@ -78,6 +94,9 @@ public class SwipeObject : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Decrements the upper or lower index according to the position of the swipe (top / bottom) on screen.
+    /// </summary>
     private void DecrementCount(SCREENPOSITION position)
     {
         switch (position)
@@ -99,12 +118,24 @@ public class SwipeObject : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Gets an update of the screen centreline, used to determine top / bottom swipeable regions.
+    /// </summary>
+    private int GetScreenCentreline()
+    {
+        return Mathf.RoundToInt(Screen.height / 2f);
+    }
+    #endregion
 
+    #region Swipe Control Methods
+    /// <summary>
+    /// Called when screen is "swiped to the right", checks swipe screen position (top / bottom) and increments display object in array.
+    /// </summary>
     public void SwipeRight()
     {
         for (int i = 0; i < LeanTouch.Fingers.Count; i++)
         {
-            if (LeanTouch.Fingers[i].ScreenPosition.y >= CheckDeviceOrientation())
+            if (LeanTouch.Fingers[i].ScreenPosition.y >= GetScreenCentreline())
             {
                 // Swipe Upper
                 ChangeObject(SCREENPOSITION.UPPER, SWIPEDIRECTION.RIGHT);
@@ -116,16 +147,17 @@ public class SwipeObject : MonoBehaviour
                 ChangeObject(SCREENPOSITION.LOWER, SWIPEDIRECTION.RIGHT);
                 break;
             }
-            
-            //Debug.Log(string.Format("Current Finger Position {0}: {1},{2}", i, LeanTouch.Fingers[i].ScreenPosition.x, LeanTouch.Fingers[i].ScreenPosition.y));
         }
     }
 
+    /// <summary>
+    /// Called when screen is "swiped to the left", checks swipe screen position (top / bottom) and decrements display object in array.
+    /// </summary>
     public void SwipeLeft()
     {
         for (int i = 0; i < LeanTouch.Fingers.Count; i++)
         {
-            if (LeanTouch.Fingers[i].ScreenPosition.y >= CheckDeviceOrientation())
+            if (LeanTouch.Fingers[i].ScreenPosition.y >= GetScreenCentreline())
             {
                 // Swipe Upper
                 ChangeObject(SCREENPOSITION.UPPER, SWIPEDIRECTION.LEFT);
@@ -137,29 +169,11 @@ public class SwipeObject : MonoBehaviour
                 ChangeObject(SCREENPOSITION.LOWER, SWIPEDIRECTION.LEFT);
                 break;
             }
-
-            //Debug.Log(string.Format("Current Finger Position {0}: {1},{2}", i, LeanTouch.Fingers[i].ScreenPosition.x, LeanTouch.Fingers[i].ScreenPosition.y));
         }
     }
+    #endregion
 
-    private int CheckDeviceOrientation()
-    {
-        //int centre = 0;
-
-        //if (Input.deviceOrientation == DeviceOrientation.Portrait || Input.deviceOrientation == DeviceOrientation.PortraitUpsideDown)
-        //{
-        //    centre = Mathf.RoundToInt(Screen.height / 2f);
-        //}
-        //else //if (Input.deviceOrientation == DeviceOrientation.LandscapeLeft || Input.deviceOrientation == DeviceOrientation.LandscapeRight)
-        //{
-        //    centre = Mathf.RoundToInt(Screen.height / 2f);
-        //}
-
-        //return centre;
-
-        return Mathf.RoundToInt(Screen.height / 2f);
-    }
-
+    #region Enums
     private enum SCREENPOSITION
     {
         UPPER,
@@ -171,4 +185,5 @@ public class SwipeObject : MonoBehaviour
         LEFT,
         RIGHT
     }
+    #endregion
 }
