@@ -1,62 +1,91 @@
-﻿using UnityEngine;
-using Lean.Touch;
+﻿using Lean.Touch;
+using UnityEngine;
 
 public class SwipeObject : MonoBehaviour
 {
+    // Public Attributes
     public GameObject[] upperObjects;
     public GameObject[] lowerObjects;
+    public GameObject frontCover;
+    public GameObject backCover;
 
+    // Private Attributes
     private int _IndexLwrObjs;
     private int _IndexUprObjs;
+    private AudioSource _PageTurnAudio;
+    private bool _IsFrontCover;
+    private bool _IsBackCover;
 
 
     // Start is called before the first frame update
     private void Start()
     {
-        InitialiseScreen();
+        _PageTurnAudio = GetComponent<AudioSource>();
+        ActivateFrontCover();
     }
 
     #region Internal Methods
-    /// <summary>
-    /// Initialises the display, de-activating all objects in the upper and lower arrays, reseting indexes, and activating the first object in
-    /// both arrays.
-    /// </summary>
-    private void InitialiseScreen()
+    private void DeActivateCovers()
     {
+        frontCover.SetActive(false);
+        backCover.SetActive(false);
+        _IsFrontCover = frontCover.activeSelf;
+        _IsBackCover = backCover.activeSelf;
+    }
+
+    private void ActivateFrontCover()
+    {
+        frontCover.SetActive(true);
+        backCover.SetActive(false);
+        _IsFrontCover = frontCover.activeSelf;
+        _IsBackCover = backCover.activeSelf;
+        _IndexLwrObjs = -1;
+        _IndexUprObjs = -1;
         HideObjects(ref upperObjects);
         HideObjects(ref lowerObjects);
-        _IndexLwrObjs = 0;
-        _IndexUprObjs = 0;
-        upperObjects[0].SetActive(true);
-        lowerObjects[0].SetActive(true);
     }
+
+    private void ActivateBackCover()
+    {
+        backCover.SetActive(true);
+        frontCover.SetActive(false);
+        _IsFrontCover = frontCover.activeSelf;
+        _IsBackCover = backCover.activeSelf;
+        _IndexUprObjs = upperObjects.Length;
+        _IndexLwrObjs = lowerObjects.Length;
+        HideObjects(ref upperObjects);
+        HideObjects(ref lowerObjects);
+    }
+
 
     /// <summary>
     /// Changes object according to swipe direction and position on screen.
     /// </summary>
-    private void ChangeObject(SCREENPOSITION position, SWIPEDIRECTION direction)
+    private void ChangePage(SCREENPOSITION position, SWIPEDIRECTION direction)
     {
         switch (direction)
         {
             case SWIPEDIRECTION.RIGHT:
-                IncrementCount(position);
+                DecrementCount(position);
                 break;
             case SWIPEDIRECTION.LEFT:
-                DecrementCount(position);
+                IncrementCount(position);
                 break;
         }
 
-        switch (position)
+        if (!_IsFrontCover && !_IsBackCover)
         {
-            case SCREENPOSITION.UPPER:
-                HideObjects(ref upperObjects);
-                upperObjects[_IndexUprObjs].SetActive(true);
-                break;
-            case SCREENPOSITION.LOWER:
-                HideObjects(ref lowerObjects);
-                lowerObjects[_IndexLwrObjs].SetActive(true);
-                break;
+            ShowCurrentPage();
         }
+        _PageTurnAudio.Play();
+    }
+
+    private void ShowCurrentPage()
+    {
+        HideObjects(ref upperObjects);
+        HideObjects(ref lowerObjects);
+        upperObjects[_IndexUprObjs].SetActive(true);
+        lowerObjects[_IndexLwrObjs].SetActive(true);
     }
 
     /// <summary>
@@ -79,16 +108,26 @@ public class SwipeObject : MonoBehaviour
         {
             case SCREENPOSITION.UPPER:
                 _IndexUprObjs++;
-                if (_IndexUprObjs == upperObjects.Length)
+                if (_IndexUprObjs == 0)
                 {
-                    _IndexUprObjs = 0;
+                    _IndexLwrObjs = 0;
+                    DeActivateCovers();
+                }
+                else if (_IndexUprObjs >= upperObjects.Length)
+                {
+                    ActivateBackCover();
                 }
                 break;
             case SCREENPOSITION.LOWER:
                 _IndexLwrObjs++;
-                if (_IndexLwrObjs == lowerObjects.Length)
+                if (_IndexLwrObjs == 0)
                 {
-                    _IndexLwrObjs = 0;
+                    _IndexUprObjs = 0;
+                    DeActivateCovers();
+                }
+                if (_IndexLwrObjs >= lowerObjects.Length)
+                {
+                    ActivateBackCover();
                 }
                 break;
         }
@@ -105,14 +144,28 @@ public class SwipeObject : MonoBehaviour
                 _IndexUprObjs--;
                 if (_IndexUprObjs < 0)
                 {
-                    _IndexUprObjs = upperObjects.Length - 1;
+                    // Activate Cover Page
+                    ActivateFrontCover();
+                }
+                else if (_IndexUprObjs == upperObjects.Length - 1)
+                {
+                    // Last page before cover
+                    _IndexLwrObjs = _IndexUprObjs;
+                    DeActivateCovers();
                 }
                 break;
             case SCREENPOSITION.LOWER:
                 _IndexLwrObjs--;
                 if (_IndexLwrObjs < 0)
                 {
-                    _IndexLwrObjs = lowerObjects.Length - 1;
+                    // Activate Cover Page
+                    ActivateFrontCover();
+                }
+                else if (_IndexLwrObjs == lowerObjects.Length - 1)
+                {
+                    // Last page before cover
+                    _IndexUprObjs = _IndexLwrObjs;
+                    DeActivateCovers();
                 }
                 break;
         }
@@ -138,16 +191,18 @@ public class SwipeObject : MonoBehaviour
             if (LeanTouch.Fingers[i].ScreenPosition.y >= GetScreenCentreline())
             {
                 // Swipe Upper
-                ChangeObject(SCREENPOSITION.UPPER, SWIPEDIRECTION.RIGHT);
+                ChangePage(SCREENPOSITION.UPPER, SWIPEDIRECTION.RIGHT);
                 break;
             }
             else
             {
                 // Swipe Lower
-                ChangeObject(SCREENPOSITION.LOWER, SWIPEDIRECTION.RIGHT);
+                ChangePage(SCREENPOSITION.LOWER, SWIPEDIRECTION.RIGHT);
                 break;
             }
         }
+        Debug.Log("UpperIndex: " + _IndexUprObjs);
+        Debug.Log("LowerIndex: " + _IndexLwrObjs);
     }
 
     /// <summary>
@@ -160,16 +215,18 @@ public class SwipeObject : MonoBehaviour
             if (LeanTouch.Fingers[i].ScreenPosition.y >= GetScreenCentreline())
             {
                 // Swipe Upper
-                ChangeObject(SCREENPOSITION.UPPER, SWIPEDIRECTION.LEFT);
+                ChangePage(SCREENPOSITION.UPPER, SWIPEDIRECTION.LEFT);
                 break;
             }
             else
             {
                 // Swipe Lower
-                ChangeObject(SCREENPOSITION.LOWER, SWIPEDIRECTION.LEFT);
+                ChangePage(SCREENPOSITION.LOWER, SWIPEDIRECTION.LEFT);
                 break;
             }
         }
+        Debug.Log("UpperIndex: " + _IndexUprObjs);
+        Debug.Log("LowerIndex: " + _IndexLwrObjs);
     }
     #endregion
 
@@ -181,7 +238,7 @@ public class SwipeObject : MonoBehaviour
     }
 
     private enum SWIPEDIRECTION
-    { 
+    {
         LEFT,
         RIGHT
     }
