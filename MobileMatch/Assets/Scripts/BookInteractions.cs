@@ -1,7 +1,7 @@
 ﻿using Lean.Touch;
 using UnityEngine;
 
-public class SwipeObject : MonoBehaviour
+public class BookInteractions : MonoBehaviour
 {
     // Public Attributes
     public GameObject[] upperObjects;
