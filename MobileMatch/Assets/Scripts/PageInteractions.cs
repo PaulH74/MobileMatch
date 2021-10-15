@@ -1,63 +1,28 @@
 ﻿using Lean.Touch;
 using UnityEngine;
 
-public class BookInteractions : MonoBehaviour
+public class PageInteractions : MonoBehaviour
 {
     // Public Attributes
     public GameObject[] upperObjects;
     public GameObject[] lowerObjects;
-    public GameObject frontCover;
-    public GameObject backCover;
 
     // Private Attributes
     private int _IndexLwrObjs;
     private int _IndexUprObjs;
     private AudioSource _PageTurnAudio;
-    private bool _IsFrontCover;
-    private bool _IsBackCover;
 
 
     // Start is called before the first frame update
     private void Start()
     {
         _PageTurnAudio = GetComponent<AudioSource>();
-        ActivateFrontCover();
+        _IndexLwrObjs = 0;
+        _IndexUprObjs = 0;
+        ShowCurrentPage();
     }
 
     #region Internal Methods
-    private void DeActivateCovers()
-    {
-        frontCover.SetActive(false);
-        backCover.SetActive(false);
-        _IsFrontCover = frontCover.activeSelf;
-        _IsBackCover = backCover.activeSelf;
-    }
-
-    private void ActivateFrontCover()
-    {
-        frontCover.SetActive(true);
-        backCover.SetActive(false);
-        _IsFrontCover = frontCover.activeSelf;
-        _IsBackCover = backCover.activeSelf;
-        _IndexLwrObjs = -1;
-        _IndexUprObjs = -1;
-        HideObjects(ref upperObjects);
-        HideObjects(ref lowerObjects);
-    }
-
-    private void ActivateBackCover()
-    {
-        backCover.SetActive(true);
-        frontCover.SetActive(false);
-        _IsFrontCover = frontCover.activeSelf;
-        _IsBackCover = backCover.activeSelf;
-        _IndexUprObjs = upperObjects.Length;
-        _IndexLwrObjs = lowerObjects.Length;
-        HideObjects(ref upperObjects);
-        HideObjects(ref lowerObjects);
-    }
-
-
     /// <summary>
     /// Changes object according to swipe direction and position on screen.
     /// </summary>
@@ -73,10 +38,7 @@ public class BookInteractions : MonoBehaviour
                 break;
         }
 
-        if (!_IsFrontCover && !_IsBackCover)
-        {
-            ShowCurrentPage();
-        }
+        ShowCurrentPage();
         _PageTurnAudio.Play();
     }
 
@@ -108,26 +70,30 @@ public class BookInteractions : MonoBehaviour
         {
             case SCREENPOSITION.UPPER:
                 _IndexUprObjs++;
-                if (_IndexUprObjs == 0)
+                if (_IndexUprObjs >= upperObjects.Length - 1)
                 {
-                    _IndexLwrObjs = 0;
-                    DeActivateCovers();
+                    // Reached end of book, keep on last page
+                    _IndexUprObjs = upperObjects.Length - 1;
+                    _IndexLwrObjs = lowerObjects.Length - 1;
                 }
-                else if (_IndexUprObjs >= upperObjects.Length)
+                else if (_IndexUprObjs == 1)
                 {
-                    ActivateBackCover();
+                    // First Page (set lower index to match)
+                    _IndexLwrObjs = 1;
                 }
                 break;
             case SCREENPOSITION.LOWER:
                 _IndexLwrObjs++;
-                if (_IndexLwrObjs == 0)
+                if (_IndexLwrObjs >= lowerObjects.Length - 1)
                 {
-                    _IndexUprObjs = 0;
-                    DeActivateCovers();
+                    // Reached end of book, keep on last page
+                    _IndexUprObjs = upperObjects.Length - 1;
+                    _IndexLwrObjs = lowerObjects.Length - 1;
                 }
-                if (_IndexLwrObjs >= lowerObjects.Length)
+                else if (_IndexLwrObjs == 1)
                 {
-                    ActivateBackCover();
+                    // First Page (set upper index to match)
+                    _IndexUprObjs = 1;
                 }
                 break;
         }
@@ -142,30 +108,30 @@ public class BookInteractions : MonoBehaviour
         {
             case SCREENPOSITION.UPPER:
                 _IndexUprObjs--;
-                if (_IndexUprObjs < 0)
+                if (_IndexUprObjs <= 0)
                 {
-                    // Activate Cover Page
-                    ActivateFrontCover();
+                    // Reached front cover
+                    _IndexUprObjs = 0;
+                    _IndexLwrObjs = 0;
                 }
-                else if (_IndexUprObjs == upperObjects.Length - 1)
+                else if (_IndexUprObjs == upperObjects.Length - 2)
                 {
-                    // Last page before cover
-                    _IndexLwrObjs = _IndexUprObjs;
-                    DeActivateCovers();
+                    // Going to last page from back cover, update lower index to match
+                    _IndexLwrObjs = lowerObjects.Length - 2;
                 }
                 break;
             case SCREENPOSITION.LOWER:
                 _IndexLwrObjs--;
-                if (_IndexLwrObjs < 0)
+                if (_IndexLwrObjs <= 0)
                 {
-                    // Activate Cover Page
-                    ActivateFrontCover();
+                    // Reached front cover
+                    _IndexUprObjs = 0;
+                    _IndexLwrObjs = 0;
                 }
-                else if (_IndexLwrObjs == lowerObjects.Length - 1)
+                else if (_IndexLwrObjs == lowerObjects.Length - 2)
                 {
-                    // Last page before cover
-                    _IndexUprObjs = _IndexLwrObjs;
-                    DeActivateCovers();
+                    // Going to last page from back cover, update lower index to match
+                    _IndexUprObjs = upperObjects.Length - 2;
                 }
                 break;
         }
