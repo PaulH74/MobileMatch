@@ -1,4 +1,5 @@
-﻿using Lean.Touch;
+﻿using System.Collections;
+using Lean.Touch;
 using UnityEngine;
 
 public class PageInteractions : MonoBehaviour
@@ -11,6 +12,7 @@ public class PageInteractions : MonoBehaviour
     private int _IndexLwrObjs;
     private int _IndexUprObjs;
     private AudioSource _PageTurnAudio;
+    private bool _CanTouch;
 
 
     // Start is called before the first frame update
@@ -19,6 +21,7 @@ public class PageInteractions : MonoBehaviour
         _PageTurnAudio = GetComponent<AudioSource>();
         _IndexLwrObjs = 0;
         _IndexUprObjs = 0;
+        _CanTouch = true;
         ShowCurrentPage();
     }
 
@@ -70,10 +73,15 @@ public class PageInteractions : MonoBehaviour
         {
             case SCREENPOSITION.UPPER:
                 _IndexUprObjs++;
-                if (_IndexUprObjs >= upperObjects.Length - 1)
+                if (_IndexUprObjs == upperObjects.Length)
                 {
-                    // Reached end of book, keep on last page
-                    _IndexUprObjs = upperObjects.Length - 1;
+                    // End Of Book, reset to front
+                    _IndexUprObjs = 0;
+                    _IndexLwrObjs = 0;
+                }
+                else if (_IndexUprObjs == upperObjects.Length - 1)
+                {
+                    // Reached back cover, match lower
                     _IndexLwrObjs = lowerObjects.Length - 1;
                 }
                 else if (_IndexUprObjs == 1)
@@ -84,11 +92,17 @@ public class PageInteractions : MonoBehaviour
                 break;
             case SCREENPOSITION.LOWER:
                 _IndexLwrObjs++;
-                if (_IndexLwrObjs >= lowerObjects.Length - 1)
+
+                if (_IndexLwrObjs == lowerObjects.Length)
                 {
-                    // Reached end of book, keep on last page
+                    // End Of Book, reset to front
+                    _IndexUprObjs = 0;
+                    _IndexLwrObjs = 0;
+                }
+                else if (_IndexLwrObjs == lowerObjects.Length - 1)
+                {
+                    // Reached back cover, match lower
                     _IndexUprObjs = upperObjects.Length - 1;
-                    _IndexLwrObjs = lowerObjects.Length - 1;
                 }
                 else if (_IndexLwrObjs == 1)
                 {
@@ -152,20 +166,27 @@ public class PageInteractions : MonoBehaviour
     /// </summary>
     public void SwipeRight()
     {
-        for (int i = 0; i < LeanTouch.Fingers.Count; i++)
+        if (_CanTouch)
         {
-            if (LeanTouch.Fingers[i].ScreenPosition.y >= GetScreenCentreline())
+            _CanTouch = false;
+
+            for (int i = 0; i < LeanTouch.Fingers.Count; i++)
             {
-                // Swipe Upper
-                ChangePage(SCREENPOSITION.UPPER, SWIPEDIRECTION.RIGHT);
-                break;
+                if (LeanTouch.Fingers[i].ScreenPosition.y >= GetScreenCentreline())
+                {
+                    // Swipe Upper
+                    ChangePage(SCREENPOSITION.UPPER, SWIPEDIRECTION.RIGHT);
+                    break;
+                }
+                else
+                {
+                    // Swipe Lower
+                    ChangePage(SCREENPOSITION.LOWER, SWIPEDIRECTION.RIGHT);
+                    break;
+                }
             }
-            else
-            {
-                // Swipe Lower
-                ChangePage(SCREENPOSITION.LOWER, SWIPEDIRECTION.RIGHT);
-                break;
-            }
+
+            StartCoroutine(DelayTouch());
         }
     }
 
@@ -174,23 +195,70 @@ public class PageInteractions : MonoBehaviour
     /// </summary>
     public void SwipeLeft()
     {
-        for (int i = 0; i < LeanTouch.Fingers.Count; i++)
+        if (_CanTouch)
         {
-            if (LeanTouch.Fingers[i].ScreenPosition.y >= GetScreenCentreline())
+            _CanTouch = false;
+
+            for (int i = 0; i < LeanTouch.Fingers.Count; i++)
             {
-                // Swipe Upper
-                ChangePage(SCREENPOSITION.UPPER, SWIPEDIRECTION.LEFT);
-                break;
+                if (LeanTouch.Fingers[i].ScreenPosition.y >= GetScreenCentreline())
+                {
+                    // Swipe Upper
+                    ChangePage(SCREENPOSITION.UPPER, SWIPEDIRECTION.LEFT);
+                    break;
+                }
+                else
+                {
+                    // Swipe Lower
+                    ChangePage(SCREENPOSITION.LOWER, SWIPEDIRECTION.LEFT);
+                    break;
+                }
             }
-            else
+
+            StartCoroutine(DelayTouch());
+        }
+    }
+
+    public void OnTouch()
+    {
+        if (_CanTouch)
+        {
+            _CanTouch = false;
+
+            for (int i = 0; i < LeanTouch.Fingers.Count; i++)
             {
-                // Swipe Lower
-                ChangePage(SCREENPOSITION.LOWER, SWIPEDIRECTION.LEFT);
-                break;
+                if (LeanTouch.Fingers[i].ScreenPosition.y >= GetScreenCentreline())
+                {
+                    // Touch Upper
+                    ChangePage(SCREENPOSITION.UPPER, SWIPEDIRECTION.LEFT);
+                    Debug.Log("TOUCHED UPPER");
+                    break;
+                }
+                else
+                {
+                    // Swipe Lower
+                    ChangePage(SCREENPOSITION.LOWER, SWIPEDIRECTION.LEFT);
+                    Debug.Log("TOUCHED LOWER");
+                    break;
+                }
             }
+
+            StartCoroutine(DelayTouch());
         }
     }
     #endregion
+
+    /// <summary>
+    /// This co-routine adds a time delay between interactions (to avoid skipping on WebGL app / Simmer.IO site).
+    /// </summary>
+    private IEnumerator DelayTouch()
+    {
+        const float DELAY = 1f;
+
+        yield return new WaitForSeconds(DELAY);
+
+        _CanTouch = true;
+    }
 
     #region Enums
     private enum SCREENPOSITION
